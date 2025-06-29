@@ -69,14 +69,16 @@ function createAddQuoteForm() {
 
 document.addEventListener("DOMContentLoaded", function () {
     loadQuotes();
+    createAddQuoteForm();
+    populateCategories();
 
   document.getElementById("newQuote").addEventListener("click", filterQuotes);
 
   document.getElementById("addQuoteBtn").addEventListener("click",addQuote);
 
   document.getElementById("exportBtn").addEventListener("click", exportToJsonFile);
-  createAddQuoteForm();
-  populateCategories();
+
+  setInterval(syncWithServer, 10000);
 });
 function importFromJsonFile(event) {
   const fileReader = new FileReader();
@@ -135,6 +137,7 @@ function populateCategories() {
 }
 function filterQuotes() {
   const selectedCategory = document.getElementById("categoryFilter").value;
+
   localStorage.setItem("selectedCategory", selectedCategory);
 
   const quoteDisplay = document.getElementById("quoteDisplay");
@@ -156,4 +159,79 @@ function filterQuotes() {
     <p>"${quote.text}"</p>
     <small><em>Category: ${quote.category}</em></small>
   `;
+}
+async function fetchQuotesFromServer() {
+  try {
+    const response = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=10");
+    const serverQuotes = await response.json();
+
+    const formattedQuotes = serverQuotes.map(post => ({
+      text: post.title,
+      category: "Server"
+    }));
+
+    return formattedQuotes;
+  } catch (error) {
+    console.error("Error fetching server quotes:", error);
+    return [];
+  }
+}
+async function syncQuotes() {
+  const serverQuotes = await fetchQuotesFromServer();
+
+  let newQuotesAdded = 0;
+
+  serverQuotes.forEach(serverQuote => {
+    const exists = quotes.some(localQuote => localQuote.text === serverQuote.text);
+    if (!exists) {
+      quotes.push(serverQuote);
+      newQuotesAdded++;
+    }
+  });
+
+  if (newQuotesAdded > 0) {
+    saveQuotes();
+    populateCategories();
+    notifyUser(${newQuotesAdded} new quote(s) synced from server.);
+  }
+}
+function notifyUser(message) {
+  const existingNotice = document.getElementById("syncNotice");
+  if (existingNotice) existingNotice.remove();
+
+  const notice = document.createElement("div");
+  notice.id = "syncNotice";
+  notice.textContent = message;
+  notice.style.background = "#dff0d8";
+  notice.style.padding = "10px";
+  notice.style.marginTop = "10px";
+  notice.style.border = "1px solid #3c763d";
+  notice.style.color = "#3c763d";
+
+  document.body.insertBefore(notice, document.body.firstChild);
+
+  // Remove after 5 seconds
+  setTimeout(() => {
+    notice.remove();
+  }, 5000);
+}
+async function postQuoteToServer(quote) {
+  try {
+    const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
+      method: "POST",
+      body: JSON.stringify({
+        title: quote.text,
+        body: quote.category,
+        userId: 1
+      }),
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      }
+    });
+
+    const result = await response.json();
+    console.log("Posted to server:", result);
+  } catch (err) {
+    console.error("Failed to post quote:", err);
+  }
 }
