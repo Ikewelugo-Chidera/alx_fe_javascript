@@ -192,7 +192,7 @@ async function syncQuotes() {
   if (newQuotesAdded > 0) {
     saveQuotes();
     populateCategories();
-    notifyUser(${newQuotesAdded} new quote(s) synced from server.);
+    notifyUser("Quotes synced with server!");
   }
 }
 function notifyUser(message) {
