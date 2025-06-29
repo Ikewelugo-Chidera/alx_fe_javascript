@@ -1,8 +1,22 @@
-let quotes = [
-  { text: "The only way to do great work is to love what you do.", category: "Inspiration" },
-  { text: "Simplicity is the soul of efficiency.", category: "Productivity" },
-  { text: "Code is like humor. When you have to explain it, it’s bad.", category: "Programming" }
-];
+let quotes = [];
+
+function loadQuotes() {
+  const stored = localStorage.getItem("quotes");
+  if (stored) {
+    quotes = JSON.parse(stored);
+  } else {
+    quotes = [
+      { text: "The only way to do great work is to love what you do.", category: "Inspiration" },
+      { text: "Simplicity is the soul of efficiency.", category: "Productivity" },
+      { text: "Code is like humor. When you have to explain it, it’s bad.", category: "Programming" }
+    ];
+    saveQuotes();
+  }
+}
+
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
 
 function showRandomQuote() {
   const quoteDisplay = document.getElementById("quoteDisplay");
@@ -24,7 +38,7 @@ function addQuote() {
 
   if (newQuote !== "" && newCategory !== "") {
     quotes.push({ text: newQuote, category: newCategory });
-
+    saveQuotes();
     quoteTextInput.value = "";
     quoteCategoryInput.value = "";
   }
@@ -53,7 +67,45 @@ function createAddQuoteForm() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    loadQuotes();
+
   document.getElementById("newQuote").addEventListener("click", showRandomQuote);
 
+  document.getElementById("addQuoteBtn").addEventListener("click",addQuote);
+
+  document.getElementById("exportBtn").addEventListener("click", exportToJsonFile);
   createAddQuoteForm();
 });
+function importFromJsonFile(event) {
+  const fileReader = new FileReader();
+
+  fileReader.onload = function (e) {
+    try {
+      const importedQuotes = JSON.parse(e.target.result);
+      if (Array.isArray(importedQuotes)) {
+        quotes.push(...importedQuotes);
+        saveQuotes();
+        alert("Quotes imported successfully!");
+      } else {
+        alert("Invalid JSON format.");
+      }
+    } catch (err) {
+      alert("Error reading file.");
+    }
+  };
+
+  fileReader.readAsText(event.target.files[0]);
+}
+
+function exportToJsonFile() {
+  const dataStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
